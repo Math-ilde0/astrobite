@@ -23,13 +23,21 @@
         <li><a href="/mywebsite/astrobite/index.php">Home</a></li>
         <li><a href="/mywebsite/astrobite/products.php">Products</a></li>
         <li><a href="/mywebsite/astrobite/contact.php">Contact</a></li>
-        
       </ul>
       <form class="nav-search" action="/mywebsite/astrobite/products.php" method="GET">
         <input type="text" name="search" placeholder="Search..." />
         <button type="submit">🔍</button>
       </form>
       <ul class="nav-links">
+        <li class="cart-container">
+          <a href="<?= $basePath ?>/cart.php" class="cart-link" aria-label="Cart">
+            🛒 <span class="cart-count">0</span> <!-- Placeholder for cart count -->
+          </a>
+          <!-- Dropdown Cart -->
+          <div class="cart-dropdown">
+            <p>Your cart is empty.</p>
+          </div>
+        </li>
         <li>
           <a href="<?= $basePath ?>/login.php" class="login-link" aria-label="Login">
             <img src="<?= $basePath ?>/assets/images/loginiconWhite.png" alt="Login" class="login-icon" />
