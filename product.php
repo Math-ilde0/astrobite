@@ -96,12 +96,17 @@ function availability_badge(?int $qty): string {
 ?>
 
 <main class="container product-detail" id="main-content" itemscope itemtype="https://schema.org/Product">
-  <!-- Breadcrumb -->
-  <nav class="breadcrumb" aria-label="Breadcrumb">
-    <a href="<?= htmlspecialchars(($base ?: '').'/index.php') ?>">Home</a> ›
-    <a href="<?= htmlspecialchars(($base ?: '').'/products.php') ?>">Products</a> ›
-    <span aria-current="page"><?= htmlspecialchars($item['name']) ?></span>
-  </nav>
+
+  <div class="product-detail-toprow">
+    <a href="products.php" class="button secondary back-to-products">← Back to products</a>
+    <div class="breadcrumb-row">
+      <nav class="breadcrumb" aria-label="Breadcrumb">
+        <a href="<?= htmlspecialchars(($base ?: '').'/index.php') ?>">Home</a> ›
+        <a href="<?= htmlspecialchars(($base ?: '').'/products.php') ?>">Products</a> ›
+        <span aria-current="page"><?= htmlspecialchars($item['name']) ?></span>
+      </nav>
+    </div>
+  </div>
 
   <div class="product-layout">
     <!-- Image (one at a time) -->
@@ -128,7 +133,6 @@ function availability_badge(?int $qty): string {
       <h1 id="pd-title" itemprop="name"><?= htmlspecialchars($item['name']) ?></h1>
 
       <p class="product-detail__price">
-        <span class="sr-only">Price:</span>
         <data value="<?= number_format((float)$item['price'], 2, '.', '') ?>" itemprop="price">
           <?= number_format((float)$item['price'], 2) ?> $
         </data>
@@ -175,7 +179,6 @@ function availability_badge(?int $qty): string {
         <label class="qty-label" for="qty">Quantity</label>
         <input id="qty" type="number" min="1" value="1" inputmode="numeric" aria-label="Quantity" class="qty-input" />
         <button class="button primary" type="button" aria-label="Add to cart">Add to cart</button>
-        <a href="products.php" class="button secondary">Back to products</a>
       </div>
 
       <!-- screen-reader announcements -->
@@ -243,34 +246,23 @@ product-detail-images {
   position:absolute;
   top:50%;
   transform: translateY(-50%);
-  width:44px;height:44px;
+  width:60px;height:60px;
   border-radius:999px;
-  border:1px solid rgba(255,255,255,.18);
+  border:1px solid rgba(0,0,0,0);
   color:#fff;
-  font-size:26px;
+  font-size:46px;
   line-height:42px;
   text-align:center;
   cursor:pointer;
   user-select:none;
+background: rgba(0,0,0,0);
 }
 .switch-arrow.left{  left:-16px;  }
 .switch-arrow.right{ right:-16px; }
 
 
 /* Stock list styling (unchanged, included for completeness) */
-.store-stock { margin:16px 0; }
-.store-stock-list { list-style:none; padding-left:0; display:grid; gap:10px; }
-.store-stock-item { border:1px solid rgba(255,255,255,.12); border-radius:10px; padding:10px; backdrop-filter: blur(4px); }
-.store-row { display:flex; align-items:flex-start; justify-content:space-between; gap:12px; flex-wrap:wrap; }
-.store-meta .muted { opacity:.8; margin-left:6px; }
-.small{ font-size:12px; }
-.store-qty{ display:flex; align-items:center; gap:10px; }
-.qty-num.dim{ opacity:.6; }
-.badge{ padding:4px 10px; border-radius:999px; font-size:12px; font-weight:600; display:inline-block; }
-.badge-in{ background:#0f3a2f; color:#c7f5d9; }
-.badge-low{ background:#3a3510; color:#fff1b8; }
-.badge-out{ background:#3a0f12; color:#f5c7cc; }
-.badge-unknown{ background:#0f2a3a; color:#c7e5f5; }
+
 
 /* Responsive: stack on mobile and keep a good image width */
 @media (max-width: 900px){
@@ -354,9 +346,8 @@ product-detail-images {
       const data = await response.json();
 
       if (!response.ok) {
-        // Not logged in - redirect to login
+        // Not logged in - redirect to login directly without alert
         if (response.status === 401) {
-          alert(data.message);
           window.location.href = data.redirect_url ? '<?= $base ?>/' + data.redirect_url : '<?= $base ?>/login.php';
           return;
         }

@@ -110,8 +110,15 @@ $userName = $_SESSION['user_name'] ?? 'Account';
       <span>AstroBite</span>
     </a>
 
+    <!-- HAMBURGER MENU TOGGLE (Mobile only) -->
+    <button class="hamburger-toggle" id="hamburger-toggle" aria-label="Toggle menu" aria-expanded="false">
+      <span></span>
+      <span></span>
+      <span></span>
+    </button>
+
     <!-- NAVIGATION -->
-    <nav class="main-nav" aria-label="Primary">
+    <nav class="main-nav" id="main-nav" aria-label="Primary">
 
       <!-- Left menu -->
       <ul class="nav-links">

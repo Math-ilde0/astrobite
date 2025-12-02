@@ -100,3 +100,6 @@
   setInterval(tick, 1000);
 })();
 </script>
+
+<!-- Main JS -->
+<script src="/mywebsite/astrobite/assets/js/script.js"></script>
