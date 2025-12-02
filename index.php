@@ -4,7 +4,6 @@
 // Page meta (header.php will read these if supported)
 $pageTitle       = 'AstroBite | Freeze-Dried Space Meals & Snacks';
 $pageDescription = 'Astronaut-inspired freeze-dried meals and snacks. Lightweight, long shelf life, and delicious — perfect for hiking, camping, and adventures on Earth.';
-$pageCanonical   = '/mywebsite/astrobite/index.php';
 
 require_once __DIR__ . '/includes/db.php';
 require_once __DIR__ . '/includes/header.php';
@@ -228,47 +227,5 @@ if ($featuredProducts) {
   opacity: 1;
 }
 </style>
-<script>
-document.addEventListener('DOMContentLoaded', function() {
-  const grid = document.getElementById('featured-grid');
-  let lastIds = [];
-  function updateProducts() {
-    grid.classList.add('fading');
-    fetch('ajax/random-products.php')
-      .then(res => res.json())
-      .then(products => {
-        if (!Array.isArray(products) || products.length < 2) return;
-        // Ensure the two products are different from last time
-        let tries = 0;
-        while (tries < 5 && lastIds.length === 2 && products.length === 2 && (products[0].product_id === lastIds[0] || products[1].product_id === lastIds[1] || products[0].product_id === lastIds[1] || products[1].product_id === lastIds[0])) {
-          // Force a new fetch if same as last
-          tries++;
-          return setTimeout(updateProducts, 200);
-        }
-        setTimeout(() => {
-          grid.innerHTML = products.map(product => {
-            const img = product.image1 ? product.image1 : '';
-            const hover = product.image2 ? `<img src=\"${product.image2}\" class=\"hover-img\" alt=\"${product.name} - alternate view\" width=\"600\" height=\"600\" loading=\"lazy\" decoding=\"async\" />` : '';
-            return `
-              <a href=\"product.php?id=${product.product_id}\" class=\"product-card-link\" itemprop=\"hasPart\" itemscope itemtype=\"https://schema.org/Product\">
-                <div class=\"product-card\">
-                  <div class=\"image-wrapper\">
-                    <img src=\"${img}\" class=\"main-img\" alt=\"${product.name}\" width=\"600\" height=\"600\" loading=\"lazy\" decoding=\"async\" itemprop=\"image\" />
-                    ${hover}
-                  </div>
-                  <h3 itemprop=\"name\">${product.name}</h3>
-                  <p itemprop=\"description\">${product.description}</p>
-                </div>
-              </a>
-            `;
-          }).join('');
-          lastIds = [products[0].product_id, products[1].product_id];
-          grid.classList.remove('fading');
-        }, 1100);
-      });
-  }
-  setInterval(updateProducts, 10000);
-});
-</script>
 
 <?php require_once __DIR__ . '/includes/footer.php'; ?>
