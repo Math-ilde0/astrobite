@@ -1,69 +1,143 @@
-AstroBite
+# **AstroBite**
 
-AstroBite is a concept e-commerce website dedicated to freeze-dried space food.
-Built with PHP, MySQL, and AJAX, the project focuses on delivering a clean, fast, and intuitive shopping experience.
-Users can browse products, manage their accounts, place orders, and explore an interface inspired by space exploration.
+AstroBite is a concept e-commerce website focused on **freeze-dried space food**.  
+Built with **PHP**, **MySQL**, and **AJAX**, the project aims to deliver a fast, clean, and intuitive shopping experience inspired by space exploration.
 
-Features
-Authentication
+Users can browse products, manage their accounts, place orders, and navigate through a simple and efficient interface.
 
-Secure email + password login
+---
 
-Account registration and password reset
+## **Features**
 
-Optional OAuth login (Google & Facebook)
+### **Authentication**
+- Secure **email + password** login  
+- Account registration  
+- Password reset  
+- Optional **OAuth login** (Google & Facebook)
 
-Shopping & Checkout
+### **Shopping & Checkout**
+- Product catalog with **filtering**  
+- Detailed product pages  
+- **AJAX-powered** cart updates  
+- Guided checkout with order summary  
+- Order confirmation screen  
 
-Product catalog with filtering options
+### **User Profile**
+- Update personal information  
+- Access full order history  
 
-Detailed product pages
+### **Admin Panel**
+- Create, edit, and delete products  
+- Manage categories  
+- Manage users  
+- View and monitor orders  
+- Update product stock  
+- Fully protected **/admin** module (restricted to admin accounts)
 
-Real-time cart updates through AJAX
+---
 
-Guided checkout flow with order summary
+## **Tech Stack**
 
-Order confirmation page after purchase
+### **Frontend**
+- HTML5  
+- CSS3  
+- Vanilla JavaScript  
+- AJAX
 
-User Profile
+### **Backend**
+- PHP 8  
+- MySQL  
+- Composer
 
-Update personal information
+### **Security**
+- Password hashing using **bcrypt**  
+- Secure sessions with **HTTPOnly** cookies  
+- Input sanitization and validation  
+- Access restrictions on admin routes  
 
-Access complete order history
+---
 
-Admin Panel
+## **Installation**
 
-Create, edit, and delete products
+### **1. Clone the repository**
 
-Manage categories and users
+```bash
+git clone https://github.com/Math-ilde0/astrobite.git
+2. Install dependencies
+composer install
 
-View and monitor orders
+3. Configure your environment
+Update your database and OAuth credentials inside:
 
-Update stock levels
+includes/config.php  
+includes/oauth.php
+or set them as server environment variables.
 
-Fully protected /admin module with restricted access
+4. Import the database
+In phpMyAdmin or MySQL CLI:
 
-Tech Stack
-Frontend
+Create a new database:
 
-HTML5 / CSS3
+CREATE DATABASE astrobite CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+Import schema:
 
-Vanilla JavaScript (AJAX)
+sql/schema.sql
+If using OAuth, also run:
 
-Bootstrap (depending on assets used)
+sql/migrate-oauth.sql
+5. Run the project locally
+If using MAMP/XAMPP:
 
-Backend
 
-PHP 8
+http://localhost/astrobite
+OAuth Setup (Google & Facebook)
+Google Login
+Go to Google Cloud Console → Credentials
 
-MySQL
+Create an OAuth 2.0 Client ID (Web)
 
-Composer
+Add the redirect URI:
 
-Security
+http(s)://YOUR_HOST/google-login/callback.php
+Add your credentials in environment variables:
 
-Password hashing using bcrypt
+GOOGLE_CLIENT_ID
+GOOGLE_CLIENT_SECRET
+or inside includes/oauth.php.
 
-Secure sessions with HTTPOnly cookies
+Facebook Login
+Go to Meta for Developers → Create App
 
-Input validation and sanitization
+Enable Facebook Login
+
+Add the redirect URI:
+
+http(s)://YOUR_HOST/facebook-login/callback.php
+Add:
+
+FACEBOOK_CLIENT_ID
+FACEBOOK_CLIENT_SECRET
+Project Structure
+
+astrobite/
+│
+├── admin/               # Admin dashboard pages
+├── ajax/                # AJAX controllers (cart, login, etc.)
+├── assets/              # CSS, JS, images
+├── includes/            # Reusable components (header, config, auth)
+├── login/               # OAuth handlers
+├── sql/                 # Database schema + migrations
+├── vendor/              # Composer dependencies
+│
+├── index.php            # Homepage
+├── products.php         # Products catalog
+├── product.php          # Product details
+├── cart.php             # Shopping cart
+├── checkout.php         # Checkout flow
+├── order-confirmation.php
+├── login.php
+├── register.php
+├── profile.php
+├── logout.php
+│
+└── README.md
