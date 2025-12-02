@@ -21,6 +21,7 @@ document.addEventListener("DOMContentLoaded", () => {
       updateImages(currentIndex);
     });
   
-    // Initialize the first image as visible
-    updateImages(currentIndex);
-  });
+  // Initialize the first image as visible
+  updateImages(currentIndex);
+
+});  
