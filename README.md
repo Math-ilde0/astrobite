@@ -34,6 +34,20 @@ Users can browse products, manage their accounts, place orders, and navigate thr
 - Update product stock  
 - Fully protected **/admin** module (restricted to admin accounts)
 
+
+### Test Accounts
+
+For testing purposes, the project includes two predefined accounts:
+
+- **User account**
+  - Email: `user@astrobite.com`
+  - Password: `password`
+
+- **Admin account**
+  - Email: `admin@astrobite.com`
+  - Password: `admin`
+
+
 ---
 
 ## **Tech Stack**
