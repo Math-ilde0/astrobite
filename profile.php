@@ -1,12 +1,27 @@
 <?php
-// profile.php
+/**
+ * profile.php - User Profile & Account Management
+ * 
+ * Purpose: Display and manage user account settings, password change, and order history
+ * 
+ * Features:
+ * - Authentication guard - redirects non-logged-in users to login
+ * - Update name form with validation
+ * - Change password form with verification
+ * - Order history display with items and status
+ * - Admin dashboard link for admin users
+ * - Flash message system for user feedback
+ * 
+ * Dependencies: db.php (PDO), header.php, footer.php
+ */
+
 // -------------------------------------------------------
-// 1) Bootstrap & auth guard (aucune sortie AVANT ceci)
+// 1) Bootstrap & authentication guard (no output BEFORE this)
 // -------------------------------------------------------
 session_start();
 require_once 'includes/db.php';
 
-// Redirige vers login si non connecté
+// Redirect to login if user is not authenticated
 if (!isset($_SESSION['user_id'])) {
   $return = urlencode($_SERVER['REQUEST_URI'] ?? '/mywebsite/astrobite/profile.php');
   header('Location: login.php?return=' . $return);
@@ -17,7 +32,7 @@ $userId = (int)$_SESSION['user_id'];
 
 // -------------------------------------------------------
 // 2) Handle POST actions (update name / change password)
-//    -> PRG pattern (redirect après succès/erreur)
+//    -> PRG pattern (redirect after success/error)
 // -------------------------------------------------------
 function flash(string $key, string $message): void {
   $_SESSION[$key] = $message;
@@ -33,7 +48,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     } else {
       $stmt = $pdo->prepare('UPDATE users SET name = ?, updated_at = NOW() WHERE user_id = ?');
       $stmt->execute([$newName, $userId]);
-      $_SESSION['user_name'] = $newName; // pour le header
+      $_SESSION['user_name'] = $newName; // Update session for header display
       flash('flash_success', 'Your name has been updated.');
     }
     header('Location: profile.php');
@@ -50,7 +65,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     } elseif ($new !== $confirm) {
       flash('flash_error', 'New password and confirmation do not match.');
     } else {
-      // Récupère le hash actuel
+      // Fetch current password hash for verification
       $stmt = $pdo->prepare('SELECT password FROM users WHERE user_id = ?');
       $stmt->execute([$userId]);
       $hash = $stmt->fetchColumn();
@@ -97,7 +112,7 @@ $stmt = $pdo->prepare("
 $stmt->execute([$userId]);
 $orders = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
-// Map des items par commande
+// Map items per order for easy access
 $orderItems = [];
 if ($orders) {
   $in = implode(',', array_fill(0, count($orders), '?'));
@@ -119,22 +134,24 @@ if ($orders) {
 }
 
 // -------------------------------------------------------
-// 4) SEO overrides for this page (noindex profile page)
+// 4) SEO configuration for this page (noindex profile)
 // -------------------------------------------------------
 $pageTitle       = 'My Profile — AstroBite';
 $pageDescription = 'Manage your AstroBite account: profile details, security, and recent Click & Collect orders.';
-$robots          = 'noindex,nofollow'; // profil : pas d’indexation
+$robots          = 'noindex,nofollow'; // User profiles should not be indexed
 require_once 'includes/header.php';
 ?>
 
 <main class="container">
-  <!-- Flash messages -->
+  <!-- ========== FLASH MESSAGE NOTIFICATIONS ========== -->
+  <!-- Display success messages from form submissions -->
   <?php if (!empty($_SESSION['flash_success'])): ?>
     <div class="success-message" style="margin:12px 0; padding:10px; border-radius:8px; background:#0f3a2f; color:#c7f5d9;">
       <?= htmlspecialchars($_SESSION['flash_success']) ?>
     </div>
     <?php unset($_SESSION['flash_success']); ?>
   <?php endif; ?>
+  <!-- Display error messages from validation failures -->
   <?php if (!empty($_SESSION['flash_error'])): ?>
     <div class="error-message" style="margin:12px 0; padding:10px; border-radius:8px; background:#3a0f12; color:#f5c7cc;">
       <?= htmlspecialchars($_SESSION['flash_error']) ?>
@@ -144,7 +161,8 @@ require_once 'includes/header.php';
 
   <h1>My Profile</h1>
 
-  <!-- Account Overview -->
+  <!-- ========== ACCOUNT INFORMATION SECTION ========== -->
+  <!-- Display user account details: name, email, member date, role -->
   <section class="card" style="margin-top:12px;">
     <h2>Account</h2>
     <p><strong>Name:</strong> <?= htmlspecialchars($user['name'] ?? '') ?></p>
@@ -154,7 +172,8 @@ require_once 'includes/header.php';
     <p><a href="logout.php">Log out</a></p>
   </section>
 
-  <!-- Quick actions -->
+  <!-- ========== QUICK ACTIONS SECTION ========== -->
+  <!-- Forms for updating name, changing password, and admin tools -->
   <section class="card" style="margin-top:16px;">
     <h2>Quick actions</h2>
     <div style="display:grid; grid-template-columns:1fr; gap:16px;">
@@ -166,7 +185,7 @@ require_once 'includes/header.php';
         </div>
       <?php endif; ?>
       
-      <!-- Update display name -->
+      <!-- Update name form -->
       <form action="profile.php" method="post" class="inline-form" autocomplete="off">
         <input type="hidden" name="action" value="update_name">
         <label for="name"><strong>Edit name</strong></label>
@@ -176,7 +195,7 @@ require_once 'includes/header.php';
         </div>
       </form>
 
-      <!-- Change password -->
+      <!-- Change password form - requires current password verification -->
       <form action="profile.php" method="post" autocomplete="off">
         <input type="hidden" name="action" value="change_password">
         <label><strong>Change password</strong></label>
@@ -190,15 +209,17 @@ require_once 'includes/header.php';
     </div>
   </section>
 
-  <!-- Order History -->
+  <!-- ========== ORDER HISTORY SECTION ========== -->
+  <!-- Display user's recent orders (up to 10) with items and status -->
   <section class="card" style="margin-top:16px;">
     <h2>Recent orders</h2>
     <?php if (!$orders): ?>
-      <p>You don’t have any orders yet.</p>
+      <p>You don't have any orders yet.</p>
       <p><a href="products.php" class="btn">Start shopping</a></p>
     <?php else: ?>
       <ul class="order-list" style="display:grid; gap:14px; list-style:none; padding-left:0;">
         <?php foreach ($orders as $o): ?>
+          <!-- Order card with status and price -->
           <li class="order-card" style="border:1px solid rgba(255,255,255,.12); border-radius:10px; padding:12px;">
             <div style="display:flex; justify-content:space-between; align-items:center; gap:12px; flex-wrap:wrap;">
               <div>
@@ -221,12 +242,12 @@ require_once 'includes/header.php';
               </div>
             </div>
 
+            <!-- Order items with product images and details -->
             <?php if (!empty($orderItems[(int)$o['order_id']])): ?>
               <div class="order-items" style="margin-top:10px; display:grid; gap:10px;">
                 <?php foreach ($orderItems[(int)$o['order_id']] as $it): ?>
                   <div style="display:grid; grid-template-columns:56px 1fr auto; gap:10px; align-items:center;">
-                    <img src="<?= htmlspecialchars($it['image1'] ?? '') ?>" alt="" style="width:56px; height:56px; object-fit:cover; border-radius:8px; background:#142b46;">
-                  <img src="<?= htmlspecialchars($it['image1'] ?? '') ?>" alt="" style="width:56px; height:56px; object-fit:cover; border-radius:8px; background:#142b46;" loading="lazy">
+                    <img src="<?= htmlspecialchars($it['image1'] ?? '') ?>" alt="" style="width:56px; height:56px; object-fit:cover; border-radius:8px; background:#142b46;" loading="lazy">
                     <div>
                       <div style="font-weight:600;"><?= htmlspecialchars($it['product_name']) ?></div>
                       <div style="opacity:.8; font-size:13px;">Qty: <?= (int)$it['quantity'] ?></div>
@@ -245,7 +266,8 @@ require_once 'includes/header.php';
     <?php endif; ?>
   </section>
 
-  <!-- SEO microdata (Person) - utile pour E-E-A-T si un jour public, mais on reste noindex -->
+  <!-- ========== JSON-LD SCHEMA (SEO MICRODATA) ========== -->
+  <!-- Person schema for potential SEO value (page remains noindex) -->
   <script type="application/ld+json">
   {
     "@context": "https://schema.org",
