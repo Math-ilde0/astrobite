@@ -1,11 +1,32 @@
 <?php
+/**
+ * product.php - Single Product Detail Page
+ * 
+ * Purpose: Display complete product details including images, price, description, and store inventory
+ * 
+ * Features:
+ * - Product detail display with multiple images (image slider with keyboard/arrow navigation)
+ * - Store inventory display for Click & Collect pickup locations (D1, D3, etc.)
+ * - Availability badges (In Stock, Low Stock, Out of Stock, Unknown)
+ * - Add to cart functionality with quantity selector
+ * - Full SEO implementation with Schema.org microdata (Product schema)
+ * - Responsive layout (adjusts image/info columns on mobile)
+ * - Accessibility support (ARIA labels, screen reader announcements, keyboard navigation)
+ * 
+ * Query Parameters:
+ * - id (required): Product ID (must be numeric)
+ * 
+ * Dependencies: db.php (PDO), header.php, footer.php
+ * AJAX Endpoints: ajax/add-to-cart.php
+ */
+
 declare(strict_types=1);
 require_once 'includes/db.php';
 
-/**
- * product.php — single product page with stock per store
- */
-
+// -------------------------------------------------------
+// 1) Validate Product ID from URL
+// -------------------------------------------------------
+// Product ID is required and must be numeric
 if (!isset($_GET['id']) || !ctype_digit($_GET['id'])) {
   http_response_code(400);
   include 'includes/header.php';
@@ -16,7 +37,10 @@ if (!isset($_GET['id']) || !ctype_digit($_GET['id'])) {
 
 $productId = (int) $_GET['id'];
 
-/* Fetch product + category */
+// -------------------------------------------------------
+// 2) Fetch Product Details & Category
+// -------------------------------------------------------
+// Query includes SEO fields (meta_title, meta_description, image_alt attributes)
 $stmt = $pdo->prepare("
   SELECT 
     p.product_id, p.name, p.description, p.price, p.image1, p.image2,
@@ -30,6 +54,7 @@ $stmt = $pdo->prepare("
 $stmt->execute([$productId]);
 $item = $stmt->fetch(PDO::FETCH_ASSOC);
 
+// Return 404 if product not found
 if (!$item) {
   http_response_code(404);
   include 'includes/header.php';
@@ -38,16 +63,24 @@ if (!$item) {
   exit;
 }
 
-/* ---------- Per-page SEO variables (read by header.php) ---------- */
+// -------------------------------------------------------
+// 3) Prepare SEO Metadata for Page Header
+//    These variables are read by header.php for meta tags
+// -------------------------------------------------------
+// Use custom meta title if available, otherwise generate from product name
 $pageTitle       = !empty($item['meta_title']) ? $item['meta_title'] : ($item['name'].' | AstroBite');
+
+// Use custom meta description or truncate product description
 $pageDescription = !empty($item['meta_description'])
   ? $item['meta_description']
   : (function($s){ $s = trim(strip_tags((string)$s)); if (function_exists('mb_substr')) return mb_substr($s,0,155,'UTF-8'); return substr($s,0,155);} )($item['description'] ?? '');
 
+// Build absolute URL for canonical and social sharing
 $scheme = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https' : 'http';
 $host   = $_SERVER['HTTP_HOST'] ?? 'localhost';
 $base   = rtrim(dirname($_SERVER['SCRIPT_NAME']), '/');
 
+// Convert relative image path to absolute URL for social media
 $imgAbs = $item['image1'] ?? '';
 if ($imgAbs) {
   $imgAbs = (strpos($imgAbs, '/') === 0)
@@ -58,7 +91,10 @@ $pageImage    = $imgAbs ?: ($scheme.'://'.$host.($base ? $base : '').'/assets/im
 $canonicalUrl = $scheme.'://'.$host.($base ? $base : '').'/product.php?id='.$productId;
 $pageType     = 'product';
 
-/* Fetch per-store stock for this product (D1, D3, etc.) */
+// -------------------------------------------------------
+// 4) Fetch Store Inventory for All Locations
+//    Shows Click & Collect availability per store
+// -------------------------------------------------------
 $storeStock = [];
 $stockStmt = $pdo->prepare("
   SELECT s.store_id, s.name, s.location_code, s.address, i.quantity
@@ -71,10 +107,13 @@ $stockStmt = $pdo->prepare("
 $stockStmt->execute([$productId]);
 $storeStock = $stockStmt->fetchAll(PDO::FETCH_ASSOC);
 
-/* Include header AFTER setting SEO vars */
+// Include header AFTER setting all SEO variables
 include 'includes/header.php';
 
-/* Build an images array for the slider (single <img> swapped by JS) */
+// -------------------------------------------------------
+// 5) Prepare Product Images Array for Slider
+//    Supports multiple images with keyboard navigation
+// -------------------------------------------------------
 $images = [];
 if (!empty($item['image1'])) {
   $images[] = ['src' => $item['image1'], 'alt' => $item['image1_alt'] ?? $item['name']];
@@ -82,11 +121,15 @@ if (!empty($item['image1'])) {
 if (!empty($item['image2'])) {
   $images[] = ['src' => $item['image2'], 'alt' => $item['image2_alt'] ?? ($item['name'].' alternate view')];
 }
+// Use placeholder if no images available
 if (empty($images)) {
   $images[] = ['src' => ($base ? $base : '').'/assets/images/placeholder.png', 'alt' => 'Product image placeholder'];
 }
 
-/* Helper for availability badge */
+// -------------------------------------------------------
+// 6) Helper Function - Stock Availability Badge
+//    Returns HTML span with appropriate badge styling
+// -------------------------------------------------------
 function availability_badge(?int $qty): string {
   if ($qty === null) return '<span class="badge badge-unknown">Unknown</span>';
   if ($qty <= 0)     return '<span class="badge badge-out">Out of stock</span>';
@@ -97,6 +140,8 @@ function availability_badge(?int $qty): string {
 
 <main class="container product-detail" id="main-content" itemscope itemtype="https://schema.org/Product">
 
+  <!-- ========== PRODUCT HEADER WITH NAVIGATION ========== -->
+  <!-- Navigation breadcrumb and back to products link -->
   <div class="product-detail-toprow">
     <a href="products.php" class="button secondary back-to-products">← Back to products</a>
     <div class="breadcrumb-row">
@@ -108,19 +153,25 @@ function availability_badge(?int $qty): string {
     </div>
   </div>
 
+  <!-- ========== PRODUCT LAYOUT: IMAGES + INFO ========== -->
+  <!-- Two-column layout: larger image on left, product info on right -->
   <div class="product-layout">
-    <!-- Image (one at a time) -->
+    
+    <!-- ========== IMAGE SLIDER SECTION ========== -->
+    <!-- Interactive image gallery with arrow buttons and keyboard navigation (left/right arrows) -->
     <div class="product-detail-images" role="region" aria-label="Product images">
       <div
         class="image-wrapper"
         tabindex="0"
         data-images='<?= htmlspecialchars(json_encode($images), ENT_QUOTES) ?>'
       >
+        <!-- Main product image (swapped by JavaScript on arrow click or keyboard input) -->
         <img id="pd-img"
              src="<?= htmlspecialchars($images[0]['src']) ?>"
              alt="<?= htmlspecialchars($images[0]['alt']) ?>"
              itemprop="image" loading="lazy" />
 
+        <!-- Image navigation arrows (only shown if multiple images available) -->
         <?php if (count($images) > 1): ?>
           <button type="button" class="switch-arrow left"  aria-label="Previous image" data-dir="-1">‹</button>
           <button type="button" class="switch-arrow right" aria-label="Next image"     data-dir="1">›</button>
@@ -128,10 +179,13 @@ function availability_badge(?int $qty): string {
       </div>
     </div>
 
-    <!-- Info -->
+    <!-- ========== PRODUCT INFORMATION SECTION ========== -->
+    <!-- Product details: name, price, description, category, stock, add to cart -->
     <div class="product-detail-info" role="region" aria-labelledby="pd-title">
+      <!-- Product title with Schema.org markup -->
       <h1 id="pd-title" itemprop="name"><?= htmlspecialchars($item['name']) ?></h1>
 
+      <!-- Product price with Schema.org structured data -->
       <p class="product-detail__price">
         <data value="<?= number_format((float)$item['price'], 2, '.', '') ?>" itemprop="price">
           <?= number_format((float)$item['price'], 2) ?> $
@@ -139,13 +193,16 @@ function availability_badge(?int $qty): string {
         <meta itemprop="priceCurrency" content="USD" />
       </p>
 
+      <!-- Product description (if available) -->
       <?php if (!empty($item['description'])): ?>
         <p itemprop="description"><?= nl2br(htmlspecialchars($item['description'])) ?></p>
       <?php endif; ?>
 
+      <!-- Product category with Schema.org markup -->
       <p>Category: <span itemprop="category"><?= htmlspecialchars($item['category_name']) ?></span></p>
 
-      <!-- Store stock (Click & Collect visibility) -->
+      <!-- ========== STORE AVAILABILITY SECTION ========== -->
+      <!-- Shows stock levels at each Click & Collect location with availability badges -->
       <section class="store-stock" aria-labelledby="stock-title">
         <h2 id="stock-title">Availability in stores</h2>
         <?php if (!$storeStock): ?>
@@ -155,6 +212,7 @@ function availability_badge(?int $qty): string {
             <?php foreach ($storeStock as $row): 
               $qty = isset($row['quantity']) ? (int)$row['quantity'] : null;
             ?>
+              <!-- Individual store stock item with availability badge -->
               <li class="store-stock-item">
                 <div class="store-row">
                   <div class="store-meta">
@@ -163,7 +221,9 @@ function availability_badge(?int $qty): string {
                     <div class="muted small"><?= htmlspecialchars($row['address']) ?></div>
                   </div>
                   <div class="store-qty">
+                    <!-- Availability badge (color-coded: in stock, low stock, out of stock) -->
                     <?= availability_badge($qty) ?>
+                    <!-- Quantity display (shows number of pieces or dash if unknown) -->
                     <span class="qty-num<?= ($qty !== null && $qty <= 0) ? ' dim' : '' ?>">
                       <?= ($qty === null) ? '—' : (int)$qty ?> pcs
                     </span>
@@ -175,18 +235,21 @@ function availability_badge(?int $qty): string {
         <?php endif; ?>
       </section>
 
+      <!-- ========== ADD TO CART SECTION ========== -->
+      <!-- Quantity selector and add to cart button with AJAX handler -->
       <div class="actions">
         <label class="qty-label" for="qty">Quantity</label>
         <input id="qty" type="number" min="1" value="1" inputmode="numeric" aria-label="Quantity" class="qty-input" />
         <button class="button primary" type="button" aria-label="Add to cart">Add to cart</button>
       </div>
 
-      <!-- screen-reader announcements -->
+      <!-- Screen reader live region for real-time feedback on cart additions -->
       <div class="sr-live" aria-live="polite" aria-atomic="true"></div>
     </div>
   </div>
 
-  <!-- Product structured data for richer snippets -->
+  <!-- ========== SCHEMA.ORG MICRODATA ========== -->
+  <!-- Product structured data for search engine rich snippets and social sharing -->
   <script type="application/ld+json">
   <?= json_encode([
       '@context' => 'https://schema.org',
@@ -207,79 +270,75 @@ function availability_badge(?int $qty): string {
 </main>
 
 <style>
-/* --- Product page layout (bigger image) --- */
-.product-layout{
-  display:grid;
-  grid-template-columns: 1.35fr 1fr; /* give more room to the image */
-  gap:28px;
+/* --- Product page layout (larger image on left, info on right) --- */
+.product-layout {
+  display: grid;
+  grid-template-columns: 1.35fr 1fr; /* Give more space to product image */
+  gap: 28px;
 }
 
-/* Center image area and let it grow */
-product-detail-images {
+/* Center image area with slight left shift for visual balance */
+.product-detail-images {
   display: flex;
   justify-content: center;
   align-items: flex-start;
-
-  /* NEW: shift slightly left */
-  transform: translateX(-80px);   /* adjust -20px to -80px depending on taste */
+  transform: translateX(-80px); /* Adjust value for aesthetic preference */
 }
 
-/* Make the image large but responsive */
-.product-detail-images .image-wrapper{
-  position:relative;
+/* Image wrapper with responsive sizing constraints */
+.product-detail-images .image-wrapper {
+  position: relative;
   width: clamp(380px, 46vw, 760px); /* MIN, PREFERRED, MAX */
-  max-width:100%;
+  max-width: 100%;
 }
 
-/* The image itself */
-#pd-img{
-  width:100%;
-  height:auto;
-  display:block;
-  border-radius:16px;
+/* Main product image styling */
+#pd-img {
+  width: 100%;
+  height: auto;
+  display: block;
+  border-radius: 16px;
   box-shadow: 0 18px 60px rgba(0,0,0,.35);
   object-fit: contain;
 }
 
-/* Arrows: larger, vertically centered, outside a bit */
-.switch-arrow{
-  position:absolute;
-  top:50%;
+/* Image navigation arrow buttons */
+.switch-arrow {
+  position: absolute;
+  top: 50%;
   transform: translateY(-50%);
-  width:60px;height:60px;
-  border-radius:999px;
-  border:1px solid rgba(0,0,0,0);
-  color:#fff;
-  font-size:46px;
-  line-height:42px;
-  text-align:center;
-  cursor:pointer;
-  user-select:none;
-background: rgba(0,0,0,0);
+  width: 60px;
+  height: 60px;
+  border-radius: 999px;
+  border: 1px solid rgba(0,0,0,0);
+  color: #fff;
+  font-size: 46px;
+  line-height: 42px;
+  text-align: center;
+  cursor: pointer;
+  user-select: none;
+  background: rgba(0,0,0,0);
 }
-.switch-arrow.left{  left:-16px;  }
-.switch-arrow.right{ right:-16px; }
+.switch-arrow.left  { left: -16px; }
+.switch-arrow.right { right: -16px; }
 
-
-/* Stock list styling (unchanged, included for completeness) */
-
-
-/* Responsive: stack on mobile and keep a good image width */
-@media (max-width: 900px){
-  .product-layout{ grid-template-columns:1fr; }
-  .product-detail-images .image-wrapper{ width: clamp(320px, 88vw, 680px); }
-  .switch-arrow.left{  left:6px; }
-  .switch-arrow.right{ right:6px; }
+/* Mobile responsive layout */
+@media (max-width: 900px) {
+  .product-layout { grid-template-columns: 1fr; }
+  .product-detail-images .image-wrapper { width: clamp(320px, 88vw, 680px); }
+  .switch-arrow.left  { left: 6px; }
+  .switch-arrow.right { right: 6px; }
 }
 </style>
 
-
 <script>
-/* One-image slider: swap src/alt, arrows + keyboard */
+/* ========== IMAGE SLIDER: ARROW AND KEYBOARD NAVIGATION ========== */
+/* Supports clicking arrows or using left/right arrow keys to swap images */
 (function () {
   const wrap = document.querySelector('.product-detail-images .image-wrapper');
   if (!wrap) return;
 
+  // Parse images array from data attribute
   let imgs = [];
   try { imgs = JSON.parse(wrap.getAttribute('data-images')) || []; } catch(e){ imgs = []; }
   if (!imgs.length) return;
@@ -291,15 +350,18 @@ background: rgba(0,0,0,0);
 
   let idx = 0;
 
-  function show(i){
+  // Update displayed image with modulo wrapping for circular navigation
+  function show(i) {
     idx = (i + imgs.length) % imgs.length;
     imgEl.src = imgs[idx].src;
     imgEl.alt = imgs[idx].alt || '';
   }
 
+  // Arrow button click handlers
   if (prevBtn) prevBtn.addEventListener('click', () => show(idx - 1));
   if (nextBtn) nextBtn.addEventListener('click', () => show(idx + 1));
 
+  // Keyboard navigation (left/right arrows)
   wrap.addEventListener('keydown', (e) => {
     if (e.key === 'ArrowLeft')  { e.preventDefault(); show(idx - 1); }
     if (e.key === 'ArrowRight') { e.preventDefault(); show(idx + 1); }
@@ -309,7 +371,8 @@ background: rgba(0,0,0,0);
   show(0);
 })();
 
-/* Add to cart button handler */
+/* ========== ADD TO CART: AJAX HANDLER WITH FEEDBACK ========== */
+/* Sends product_id and quantity to cart endpoint with loading state */
 (function () {
   const addToCartBtn = document.querySelector('.product-detail-info .button.primary');
   if (!addToCartBtn) return;
@@ -338,6 +401,7 @@ background: rgba(0,0,0,0);
       formData.append('product_id', productId);
       formData.append('quantity', quantity);
 
+      // POST to cart AJAX endpoint
       const response = await fetch('<?= $base ?>/ajax/add-to-cart.php', {
         method: 'POST',
         body: formData
@@ -346,7 +410,7 @@ background: rgba(0,0,0,0);
       const data = await response.json();
 
       if (!response.ok) {
-        // Not logged in - redirect to login directly without alert
+        // 401: Not logged in - redirect to login
         if (response.status === 401) {
           window.location.href = data.redirect_url ? '<?= $base ?>/' + data.redirect_url : '<?= $base ?>/login.php';
           return;
@@ -355,10 +419,11 @@ background: rgba(0,0,0,0);
       }
 
       if (data.success) {
-        // Success feedback
+        // Success: Update button with checkmark and green color
         addToCartBtn.textContent = '✓ Added!';
         addToCartBtn.style.background = 'linear-gradient(135deg, #00d84e, #00ff6a)';
         
+        // Announce to screen readers
         if (liveRegion) {
           liveRegion.textContent = data.message;
         }
@@ -366,7 +431,7 @@ background: rgba(0,0,0,0);
         // Update cart count in header
         updateHeaderCartCount(data.cart_count);
 
-        // Reset button after 2 seconds
+        // Reset button to original state after 2 seconds
         setTimeout(() => {
           addToCartBtn.textContent = originalText;
           addToCartBtn.style.background = '';
@@ -383,6 +448,7 @@ background: rgba(0,0,0,0);
     }
   });
 
+  // Helper: Update cart count badge in header
   function updateHeaderCartCount(count) {
     const cartCountEl = document.querySelector('.cart-count');
     if (cartCountEl) {

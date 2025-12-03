@@ -1,7 +1,15 @@
+/**
+ * admin-dashboard.css - Admin Dashboard 
+ * Galaxy-themed interface with gradient headers, animated notifications,
+ * semantic colors, responsive tables, modals, and mobile optimization.
+ */
+
 /* ============================================
-   ADMIN DASHBOARD STYLES
-   Galaxy-themed admin interface for AstroBite
-   ============================================ */
+   CSS VARIABLES - Admin Color Palette
+   ============================================ 
+   Define admin-specific color tokens for consistency.
+   Cyan for primary, green for success, yellow for warning, red for danger.
+*/
 
 :root {
   --primary-cyan: #5dd9ff;
@@ -17,8 +25,11 @@
 }
 
 /* ============================================
-   MAIN PAGE LAYOUT
-   ============================================ */
+   MAIN PAGE LAYOUT - Header & Navigation
+   ============================================ 
+   Admin page container, header with title gradient.
+   Back link with hover animation (cyan→green, translateX).
+*/
 
 .admin-orders-page {
   padding: 2rem 0;
@@ -61,8 +72,12 @@
 }
 
 /* ============================================
-   MESSAGES & NOTIFICATIONS
-   ============================================ */
+   MESSAGES & NOTIFICATIONS - Animated Alerts
+   ============================================ 
+   Success: Green gradient background, green border, green text.
+   Error: Red gradient background, red border, red text.
+   Animation: slideDown (0.4s, opacity + translateY).
+*/
 
 .success-message {
   background: linear-gradient(135deg, rgba(163, 255, 112, 0.1), rgba(0, 255, 106, 0.08));
@@ -99,8 +114,12 @@
 }
 
 /* ============================================
-   FILTER TABS
-   ============================================ */
+   FILTER TABS - Status Filter UI
+   ============================================ 
+   Tab bar for filtering orders by status.
+   Flex layout with border, backdrop blur, padding.
+   Active tab: Green text, different background.
+*/
 
 .filter-tabs {
   display: flex;
@@ -147,8 +166,13 @@
 }
 
 /* ============================================
-   ORDERS TABLE SECTION
-   ============================================ */
+   ORDERS TABLE - Data Grid & Rows
+   ============================================ 
+   Orders wrapper: Dark background, rounded border, shadow, backdrop blur.
+   Table: Full width, cyan header text, borders, collapse layout.
+   Rows: Hover effects, transition animations.
+   Cells: Padding 1.25rem, vertical-align middle.
+*/
 
 .orders-wrapper {
   background: var(--bg-dark);
@@ -338,7 +362,13 @@
 }
 
 /* ============================================
-   ACTION BUTTONS
+   ACTION BUTTONS - Status Update & Delete Actions
+   ============================================
+   Styling for interactive buttons on the orders dashboard. Features gradient
+   backgrounds with cyan accent colors, smooth transitions, and elevated hover
+   states. Includes status buttons (padding 0.6rem), uppercase text with
+   letter-spacing, transform animations (translateY), and shadow effects on
+   hover/active states. Uses cubic-bezier(0.4, 0, 0.2, 1) for polished motion.
    ============================================ */
 
 .btn-status {
@@ -369,7 +399,12 @@
 }
 
 /* ============================================
-   EMPTY STATE
+   EMPTY STATE - "No Orders" Display
+   ============================================
+   Styling for the empty state message shown when no orders are present.
+   Features centered text layout (3rem padding), muted text color, emoji icon
+   (📭) scaled at 3rem with 50% opacity, and responsive padding. Provides
+   clear visual feedback when the orders list is empty, improving UX.
    ============================================ */
 
 .no-orders {
@@ -388,7 +423,14 @@
 }
 
 /* ============================================
-   MODAL STYLES
+   MODAL STYLES - Confirmation & Detail Dialogs
+   ============================================
+   Overlay modals for confirmations and detailed order information. Uses fixed
+   positioning (z-index 10000) with full-screen semi-transparent dark backdrop
+   (rgba 0,0,0,0.8) and 6px blur effect. Modal content features gradient
+   background (deep blue tones, 0.98 opacity), 16px border-radius, 2px cyan
+   border, max-width 450px (90% responsive). Includes fadeIn animation (0.3s).
+   Toggled via .active class showing flex layout for centered content.
    ============================================ */
 
 .modal {
@@ -559,7 +601,14 @@
 }
 
 /* ============================================
-   RESPONSIVE DESIGN
+   RESPONSIVE DESIGN - Mobile & Tablet Optimization
+   ============================================
+   Mobile-first responsive breakpoints for admin dashboard. At 1024px: header
+   switches to column direction, font sizes reduce, table padding tightens
+   (0.9rem 1rem), and filter tabs gap reduces (0.5rem). At 768px: page padding
+   reduces (1.5rem), further optimization for tablets. At 480px: extreme mobile
+   adaptation with minimal widths and stacked layouts. Ensures dashboard remains
+   usable across all device sizes with proper scaling and touch-friendly UI.
    ============================================ */
 
 @media (max-width: 1024px) {
@@ -727,7 +776,14 @@
 }
 
 /* ============================================
-   SCROLL BEHAVIOR
+   SCROLL BEHAVIOR - Custom Scrollbars & Table Scrolling
+   ============================================
+   Custom scrollbar styling for table containers and overflow areas. Firefox
+   uses scrollbar-width: thin with rgba(93, 217, 255, 0.4) thumb on dark
+   background. WebKit (Chrome/Safari) overrides with 8px height, custom track
+   (rgba 0,0,0,0.2) and thumb (cyan rgba 93,217,255,0.4) with 4px radius.
+   Provides consistent visual appearance across browsers while maintaining
+   subtle, non-intrusive scrollbars that match the admin UI color scheme.
    ============================================ */
 
 .table-responsive {

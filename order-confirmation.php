@@ -1,18 +1,44 @@
 <?php
 /**
- * order-confirmation.php - Order Confirmation Page
+ * order-confirmation.php - Order Confirmation & Summary Page
+ * 
+ * Purpose: Display order confirmation after successful checkout with order details and items
+ * 
+ * Features:
+ * - Order confirmation display with success messaging
+ * - Order details including date, status, and collection/delivery info
+ * - Complete order items list with images, quantities, and pricing
+ * - Order summary with subtotal and total calculation
+ * - Next steps guidance (email, processing, pickup/delivery)
+ * - Quick action buttons (View All Orders, Continue Shopping)
+ * - Responsive two-column layout (details + items)
+ * 
+ * Query Parameters:
+ * - order_id (required): Order ID to display confirmation for
+ * 
+ * Security:
+ * - Requires user login (authentication guard)
+ * - Users can only view their own orders (user_id validation)
+ * 
+ * Dependencies: db.php (PDO), header.php, footer.php
  */
 
 session_start();
 require_once 'includes/db.php';
 
-// Redirect if not logged in
+// -------------------------------------------------------
+// 1) Authentication Guard
+// -------------------------------------------------------
+// Only logged-in users can view order confirmation
 if (!isset($_SESSION['user_id'])) {
   header('Location: login.php');
   exit;
 }
 
-// Get order ID from query parameter
+// -------------------------------------------------------
+// 2) Validate Order ID Parameter
+// -------------------------------------------------------
+// Get order ID from query string (required)
 $order_id = isset($_GET['order_id']) ? (int)$_GET['order_id'] : 0;
 
 if (!$order_id) {
@@ -20,7 +46,10 @@ if (!$order_id) {
   exit;
 }
 
-// Fetch order details
+// -------------------------------------------------------
+// 3) Fetch Order Details with Store Information
+// -------------------------------------------------------
+// Verify order exists and belongs to current user
 $stmt = $pdo->prepare("
   SELECT 
     o.order_id, o.user_id, o.store_id, o.total_price, o.status, o.created_at,
@@ -33,12 +62,16 @@ $stmt = $pdo->prepare("
 $stmt->execute([$order_id, $_SESSION['user_id']]);
 $order = $stmt->fetch(PDO::FETCH_ASSOC);
 
+// Redirect if order not found or doesn't belong to user
 if (!$order) {
   header('Location: products.php');
   exit;
 }
 
-// Fetch order items
+// -------------------------------------------------------
+// 4) Fetch Order Items with Product Information
+// -------------------------------------------------------
+// Get all items in the order with product details and images
 $stmt = $pdo->prepare("
   SELECT oi.product_id, oi.quantity, oi.price_at_purchase, p.name, p.image1
   FROM order_items oi
@@ -48,7 +81,9 @@ $stmt = $pdo->prepare("
 $stmt->execute([$order_id]);
 $order_items = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
-// Page title for header
+// -------------------------------------------------------
+// 5) Prepare SEO Metadata
+// -------------------------------------------------------
 $pageTitle = 'Order Confirmation — AstroBite';
 $pageDescription = 'Your order has been placed successfully.';
 
@@ -56,22 +91,29 @@ require_once 'includes/header.php';
 ?>
 
 <main class="container confirmation-page">
+  <!-- ========== ORDER SUCCESS BANNER ========== -->
+  <!-- Large success message with order number -->
   <section class="confirmation-success">
     <div class="success-icon">✓</div>
     <h1>Order Placed Successfully!</h1>
     <p class="order-number">Order #<?= str_pad((int)$order['order_id'], 6, '0', STR_PAD_LEFT) ?></p>
   </section>
 
+  <!-- ========== TWO-COLUMN LAYOUT: ORDER DETAILS + ITEMS ========== -->
   <div class="confirmation-wrapper">
-    <!-- Order Details -->
+    
+    <!-- ========== ORDER DETAILS SECTION (LEFT COLUMN) ========== -->
+    <!-- Displays order date, status, and collection/delivery location -->
     <section class="order-details">
       <h2>Order Details</h2>
 
+      <!-- Order placement date and time -->
       <div class="detail-group">
         <label>Order Date:</label>
         <p><?= date('F j, Y \a\t g:i A', strtotime($order['created_at'])) ?></p>
       </div>
 
+      <!-- Current order status with color-coded badge -->
       <div class="detail-group">
         <label>Status:</label>
         <p class="status-badge status-<?= htmlspecialchars($order['status']) ?>">
@@ -79,6 +121,7 @@ require_once 'includes/header.php';
         </p>
       </div>
 
+      <!-- Collection point (Click & Collect) or delivery notice -->
       <?php if ($order['store_name']): ?>
         <div class="detail-group">
           <label>Collection Point:</label>
@@ -96,15 +139,19 @@ require_once 'includes/header.php';
       <?php endif; ?>
     </section>
 
-    <!-- Order Items -->
+    <!-- ========== ORDER ITEMS SECTION (RIGHT COLUMN) ========== -->
+    <!-- Lists all products with images, quantities, and pricing -->
     <section class="order-items">
       <h2>Items Ordered</h2>
 
+      <!-- Individual order items with images and pricing breakdown -->
       <div class="items-list">
         <?php foreach ($order_items as $item): 
           $subtotal = $item['price_at_purchase'] * $item['quantity'];
         ?>
+          <!-- Individual item card with product image, name, quantity, and price -->
           <div class="item">
+            <!-- Product image thumbnail -->
             <?php if ($item['image1']): ?>
               <div class="item-image">
                 <img src="<?= htmlspecialchars($item['image1']) ?>" 
@@ -112,6 +159,7 @@ require_once 'includes/header.php';
               </div>
             <?php endif; ?>
 
+            <!-- Item details: name, quantity, unit price, subtotal -->
             <div class="item-info">
               <h3><?= htmlspecialchars($item['name']) ?></h3>
               <div class="item-row">
@@ -131,7 +179,8 @@ require_once 'includes/header.php';
         <?php endforeach; ?>
       </div>
 
-      <!-- Order Summary -->
+      <!-- ========== ORDER SUMMARY ========== -->
+      <!-- Final pricing breakdown with total -->
       <div class="order-summary">
         <div class="summary-row">
           <span>Subtotal:</span>
@@ -149,22 +198,26 @@ require_once 'includes/header.php';
     </section>
   </div>
 
-  <!-- Next Steps -->
+  <!-- ========== NEXT STEPS GUIDANCE ========== -->
+  <!-- Informative steps for order processing and fulfillment -->
   <section class="next-steps">
     <h2>What's Next?</h2>
     <div class="steps-container">
+      <!-- Step 1: Email confirmation -->
       <div class="step">
         <div class="step-number">1</div>
         <h3>Confirmation Email</h3>
         <p>Check your email for an order confirmation with details.</p>
       </div>
 
+      <!-- Step 2: Order processing -->
       <div class="step">
         <div class="step-number">2</div>
         <h3>Order Processing</h3>
         <p>We'll prepare your order and notify you when it's ready.</p>
       </div>
 
+      <!-- Step 3: Pickup or delivery (dynamic based on order type) -->
       <div class="step">
         <div class="step-number">3</div>
         <h3><?= $order['store_name'] ? 'Pickup' : 'Delivery' ?></h3>
@@ -175,7 +228,8 @@ require_once 'includes/header.php';
     </div>
   </section>
 
-  <!-- Actions -->
+  <!-- ========== ACTION BUTTONS ========== -->
+  <!-- Quick navigation to view all orders or continue shopping -->
   <div class="confirmation-actions">
     <a href="<?= $basePath ?>/profile.php" class="button secondary">
       View All Orders
@@ -187,8 +241,12 @@ require_once 'includes/header.php';
 </main>
 
 <style>
-.confirmation-page { padding: 2rem 0; }
+/* --- Confirmation Page Main Container --- */
+.confirmation-page { 
+  padding: 2rem 0; 
+}
 
+/* --- Success Banner Styling --- */
 .confirmation-success {
   text-align: center;
   margin-bottom: 3rem;
@@ -215,6 +273,7 @@ require_once 'includes/header.php';
   font-weight: 600;
 }
 
+/* --- Two-Column Layout: Order Details + Items --- */
 .confirmation-wrapper {
   display: grid;
   grid-template-columns: 1fr 1.5fr;
@@ -222,6 +281,7 @@ require_once 'includes/header.php';
   margin-bottom: 2rem;
 }
 
+/* --- Shared Styling for Detail Sections --- */
 .order-details,
 .order-items {
   background: rgba(10, 40, 60, 0.4);
@@ -237,6 +297,7 @@ require_once 'includes/header.php';
   font-size: 1.2rem;
 }
 
+/* --- Order Details Fields --- */
 .detail-group {
   margin-bottom: 1.5rem;
 }
@@ -254,6 +315,7 @@ require_once 'includes/header.php';
   margin: 0;
 }
 
+/* --- Status Badge (color-coded by order status) --- */
 .status-badge {
   display: inline-block;
   padding: 0.5rem 1rem;
@@ -277,6 +339,7 @@ require_once 'includes/header.php';
   color: #a3ff70;
 }
 
+/* --- Store Collection Point Details --- */
 .store-details {
   color: rgba(255, 255, 255, 0.9);
   line-height: 1.6;
@@ -303,6 +366,7 @@ require_once 'includes/header.php';
   color: rgba(255, 255, 255, 0.7);
 }
 
+/* --- Items List with Scrollable Container --- */
 .items-list {
   display: grid;
   gap: 1rem;
@@ -312,6 +376,7 @@ require_once 'includes/header.php';
   padding-right: 0.5rem;
 }
 
+/* --- Individual Order Item Card --- */
 .item {
   display: flex;
   gap: 1rem;
@@ -321,6 +386,7 @@ require_once 'includes/header.php';
   background: rgba(0, 0, 0, 0.2);
 }
 
+/* --- Product Image Thumbnail --- */
 .item-image {
   flex-shrink: 0;
   width: 80px;
@@ -336,6 +402,7 @@ require_once 'includes/header.php';
   object-fit: cover;
 }
 
+/* --- Item Information Section --- */
 .item-info {
   flex: 1;
 }
@@ -346,6 +413,7 @@ require_once 'includes/header.php';
   font-size: 1rem;
 }
 
+/* --- Item Detail Row (quantity, price, subtotal) --- */
 .item-row {
   display: flex;
   justify-content: space-between;
@@ -368,6 +436,7 @@ require_once 'includes/header.php';
   font-weight: 600;
 }
 
+/* --- Order Summary Pricing --- */
 .order-summary {
   border-top: 2px solid rgba(255, 255, 255, 0.12);
   padding-top: 1rem;
@@ -390,6 +459,7 @@ require_once 'includes/header.php';
   margin-top: 0.5rem;
 }
 
+/* --- Next Steps Guidance Section --- */
 .next-steps {
   background: rgba(10, 40, 60, 0.4);
   border: 1px solid rgba(255, 255, 255, 0.12);
@@ -404,12 +474,14 @@ require_once 'includes/header.php';
   font-size: 1.3rem;
 }
 
+/* --- Steps Grid (3 columns: Email, Processing, Pickup/Delivery) --- */
 .steps-container {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
   gap: 1.5rem;
 }
 
+/* --- Individual Step Card --- */
 .step {
   text-align: center;
 }
@@ -440,6 +512,7 @@ require_once 'includes/header.php';
   line-height: 1.5;
 }
 
+/* --- Action Buttons at Bottom --- */
 .confirmation-actions {
   display: flex;
   gap: 1rem;
@@ -475,6 +548,7 @@ require_once 'includes/header.php';
   background: rgba(93, 217, 255, 0.2);
 }
 
+/* --- Mobile Responsive --- */
 @media (max-width: 900px) {
   .confirmation-wrapper {
     grid-template-columns: 1fr;

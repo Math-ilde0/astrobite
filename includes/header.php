@@ -1,4 +1,18 @@
 <?php
+/**
+ * header.php - Global HTML Header and Navigation Template
+ * 
+ * Renders DOCTYPE, meta tags (SEO, OG, Twitter), fonts, stylesheets, favicons,
+ * and navigation bar with logo, menu, search, cart dropdown, and account links.
+ * Injected into all pages. Initialize $pageTitle, $pageDescription before include.
+ * 
+ * Variables (set before include to override defaults):
+ * - $pageTitle, $pageDescription, $pageImage, $pageType, $robots
+ * 
+ * Session: $isLogged, $userName
+ * Functions: updateCartDropdown() (AJAX), escapeHtml()
+ */
+
 // =========================================
 //  INIT + BASE PATH
 // =========================================
@@ -36,7 +50,8 @@ $userName = $_SESSION['user_name'] ?? 'Account';
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <!-- Basic -->
+  <!-- ========== SEO & META TAGS ========== -->
+  <!-- Basic meta tags for page identification and robots -->
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title><?= htmlspecialchars($pageTitle) ?></title>
@@ -44,36 +59,40 @@ $userName = $_SESSION['user_name'] ?? 'Account';
   <meta name="robots" content="<?= htmlspecialchars($robots) ?>" />
   <link rel="canonical" href="<?= htmlspecialchars($canonicalUrl) ?>" />
 
-  <!-- Performance -->
+  <!-- ========== PERFORMANCE ========== -->
+  <!-- Preconnect to Google Fonts for faster loading -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 
-  <!-- Fonts -->
+  <!-- ========== FONTS ========== -->
+  <!-- Custom fonts: Audiowide (branding), Inter (body), Orbitron (headings) -->
   <link href="https://fonts.googleapis.com/css2?family=Audiowide&family=Inter:wght@400;600;700&family=Orbitron:wght@400;600;700&display=swap" rel="stylesheet">
 
-  <!-- CSS -->
+  <!-- ========== STYLESHEETS ========== -->
   <link rel="stylesheet" href="<?= $basePath ?>/assets/css/style.css?v=1" />
 
-  <!-- Favicons -->
+  <!-- ========== FAVICONS ========== -->
+  <!-- Multiple favicon formats for browser compatibility -->
   <link rel="icon" type="image/png" sizes="32x32" href="<?= $basePath ?>/assets/images/favicon-32.png">
   <link rel="icon" type="image/png" sizes="16x16" href="<?= $basePath ?>/assets/images/favicon-16.png">
   <link rel="apple-touch-icon" href="<?= $basePath ?>/assets/images/apple-touch-icon.png">
   <meta name="theme-color" content="#0A3D62" />
 
-  <!-- Open Graph -->
+  <!-- ========== OPEN GRAPH (Social Sharing) ========== -->
   <meta property="og:title" content="<?= htmlspecialchars($pageTitle) ?>" />
   <meta property="og:description" content="<?= htmlspecialchars($pageDescription) ?>" />
   <meta property="og:type" content="<?= $pageType === 'product' ? 'product' : 'website' ?>" />
   <meta property="og:url" content="<?= htmlspecialchars($canonicalUrl) ?>" />
   <meta property="og:image" content="<?= htmlspecialchars($pageImage) ?>" />
 
-  <!-- Twitter -->
+  <!-- ========== TWITTER CARD ========== -->
   <meta name="twitter:card" content="summary_large_image" />
   <meta name="twitter:title" content="<?= htmlspecialchars($pageTitle) ?>" />
   <meta name="twitter:description" content="<?= htmlspecialchars($pageDescription) ?>" />
   <meta name="twitter:image" content="<?= htmlspecialchars($pageImage) ?>" />
 
-  <!-- Structured Data -->
+  <!-- ========== STRUCTURED DATA (Schema.org JSON-LD) ========== -->
+  <!-- Organization and search action for search engines -->
   <script type="application/ld+json">
   {
     "@context": "https://schema.org",
@@ -101,33 +120,35 @@ $userName = $_SESSION['user_name'] ?? 'Account';
 </head>
 <body>
 
+<!-- ========== MAIN HEADER & NAVIGATION ========== -->
 <header>
   <div class="container nav-container">
 
-    <!-- Logo -->
+    <!-- ========== LOGO ========== -->
     <a href="<?= $basePath ?>/index.php" class="logo" aria-label="AstroBite Home">
-  <img src="<?= $basePath ?>/assets/images/logo.png" alt="AstroBite Logo" loading="lazy" />
+      <img src="<?= $basePath ?>/assets/images/logo.png" alt="AstroBite Logo" loading="lazy" />
       <span>AstroBite</span>
     </a>
 
-    <!-- HAMBURGER MENU TOGGLE (Mobile only) -->
+    <!-- ========== HAMBURGER MENU TOGGLE (Mobile only) ========== -->
     <button class="hamburger-toggle" id="hamburger-toggle" aria-label="Toggle menu" aria-expanded="false">
       <span></span>
       <span></span>
       <span></span>
     </button>
 
-    <!-- NAVIGATION -->
+    <!-- ========== NAVIGATION BAR ========== -->
     <nav class="main-nav" id="main-nav" aria-label="Primary">
 
-      <!-- Left menu -->
+      <!-- ========== LEFT MENU LINKS ========== -->
       <ul class="nav-links">
         <li><a href="<?= $basePath ?>/index.php">Home</a></li>
         <li><a href="<?= $basePath ?>/products.php">Products</a></li>
         <li><a href="<?= $basePath ?>/contact.php">Contact</a></li>
       </ul>
 
-      <!-- SEARCH -->
+      <!-- ========== SEARCH FORM ========== -->
+      <!-- Autocomplete dropdown powered by ajax-search.js -->
       <form id="nav-search-form"
             class="nav-search"
             action="<?= $basePath ?>/products.php"
@@ -135,32 +156,35 @@ $userName = $_SESSION['user_name'] ?? 'Account';
             autocomplete="off"
             style="position:relative;"
             data-base="<?= $basePath ?>">
-  <input id="nav-search-input" type="text" name="q" placeholder="Search..." aria-label="Search products" autocomplete="off" />
-  <button type="submit">🔍</button>
-  <div id="nav-search-dropdown" class="nav-search-dropdown" style="display:none;"></div>
+        <input id="nav-search-input" type="text" name="q" placeholder="Search..." aria-label="Search products" autocomplete="off" />
+        <button type="submit">🔍</button>
+        <div id="nav-search-dropdown" class="nav-search-dropdown" style="display:none;"></div>
       </form>
 
-      <!-- RIGHT SIDE (Cart + Account) -->
+      <!-- ========== RIGHT SIDE: CART + ACCOUNT ========== -->
       <ul class="nav-links">
 
-        <!-- CART -->
+        <!-- ========== CART ICON WITH DROPDOWN ========== -->
         <li class="cart-container">
           <a href="<?= $basePath ?>/cart.php" class="cart-link" aria-label="Cart">
             🛒 <span class="cart-count">0</span>
           </a>
+          <!-- Dropdown populated by updateCartDropdown() JavaScript function -->
           <div class="cart-dropdown">
             <p>Your cart is empty.</p>
           </div>
         </li>
 
-        <!-- ACCOUNT (Login or Profile) -->
+        <!-- ========== ACCOUNT: LOGIN OR PROFILE ========== -->
         <li class="profile-menu">
           <?php if ($isLogged): ?>
+            <!-- Logged in: show user name and profile link -->
             <a href="<?= $basePath ?>/profile.php" class="login-link" aria-label="Profile">
               <img src="<?= $basePath ?>/assets/images/loginiconWhite.png" class="login-icon" alt="Profile" loading="lazy" />
               <span style="margin-left:6px;"><?= htmlspecialchars($userName) ?></span>
             </a>
           <?php else: ?>
+            <!-- Not logged in: show login link -->
             <a href="<?= $basePath ?>/login.php" class="login-link" aria-label="Login">
               <img src="<?= $basePath ?>/assets/images/loginiconWhite.png" class="login-icon" alt="Login" loading="lazy" />
             </a>
@@ -307,10 +331,13 @@ $userName = $_SESSION['user_name'] ?? 'Account';
 </style>
 
 <script>
+// ========== CART DROPDOWN & SEARCH FUNCTIONALITY ========== 
+// Updates cart preview on hover, manages cart count, escapes HTML for XSS prevention
 (function() {
   const basePath = <?= json_encode($basePath) ?>;
   const isLogged = <?= json_encode($isLogged) ?>;
 
+  // ========== FETCH & RENDER CART DROPDOWN ========== 
   async function updateCartDropdown() {
     const cartDropdown = document.querySelector('.cart-dropdown');
     if (!cartDropdown) return;
@@ -354,6 +381,7 @@ $userName = $_SESSION['user_name'] ?? 'Account';
     }
   }
 
+  // ========== UPDATE CART BADGE COUNT ========== 
   function updateCartCount(count) {
     const cartCountEl = document.querySelector('.cart-count');
     if (cartCountEl) {
@@ -361,6 +389,7 @@ $userName = $_SESSION['user_name'] ?? 'Account';
     }
   }
 
+  // ========== ESCAPE HTML FOR XSS PREVENTION ========== 
   function escapeHtml(text) {
     const map = {
       '&': '&amp;',
@@ -372,7 +401,7 @@ $userName = $_SESSION['user_name'] ?? 'Account';
     return text.replace(/[&<>"']/g, m => map[m]);
   }
 
-  // Initialize cart dropdown on page load
+  // ========== INITIALIZE ON PAGE LOAD ========== 
   if (isLogged) {
     updateCartDropdown();
 

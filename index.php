@@ -1,14 +1,40 @@
 <?php
-// index.php
-// --------------------------------------------------
-// Page meta (header.php will read these if supported)
+/**
+ * index.php
+ * 
+ * AstroBite Homepage
+ * 
+ * Purpose:
+ * - Displays the main landing page for the AstroBite e-commerce store
+ * - Features hero section, about section, features list, and rotating product showcase
+ * - Implements SEO best practices with JSON-LD schema and meta tags
+ * 
+ * Key Features:
+ * - Responsive design with CSS animations (fade, zoom, glow effects)
+ * - Server-side rendering of initial featured products
+ * - Client-side auto-rotation of featured products (every 10 seconds)
+ * - Full Schema.org JSON-LD markup for search engines
+ * - Accessibility support with ARIA labels and semantic HTML
+ * 
+ * Dependencies:
+ * - includes/db.php: Database connection ($pdo)
+ * - includes/header.php: Page header with navigation
+ * - includes/footer.php: Page footer with store info
+ * - assets/css/style.css: All styling
+ * - assets/js/script.js: General functionality
+ */
+
+// Set page title and description for header.php to use
 $pageTitle       = 'AstroBite | Freeze-Dried Space Meals & Snacks';
 $pageDescription = 'Astronaut-inspired freeze-dried meals and snacks. Lightweight, long shelf life, and delicious — perfect for hiking, camping, and adventures on Earth.';
 
+// Include database connection and render page header with navigation
 require_once __DIR__ . '/includes/db.php';
 require_once __DIR__ . '/includes/header.php';
 
-// Preload 2 featured products for first paint
+// ========== FEATURED PRODUCTS PRELOAD ==========
+// Load 2 random products from database for initial server-side render
+// This ensures fast first paint before JavaScript rotates the products
 $featuredProducts = [];
 $stmt = $pdo->query("
   SELECT product_id, name, description, image1, image2, price
@@ -17,6 +43,9 @@ $stmt = $pdo->query("
   LIMIT 2
 ");
 $initial = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+// Transform database products into JSON-LD Product schema format
+// This will be embedded in the page for SEO purposes
 foreach ($initial as $p) {
   $fp = [
     '@type'       => 'Product',
@@ -25,6 +54,8 @@ foreach ($initial as $p) {
     'image'       => array_values(array_filter([$p['image1'] ?: null, $p['image2'] ?: null])),
     'url'         => $basePath . '/product.php?id=' . (int)$p['product_id'],
   ];
+  
+  // Add pricing information if available
   if (isset($p['price'])) {
     $fp['offers'] = [
       '@type'          => 'Offer',
@@ -78,8 +109,12 @@ foreach ($initial as $p) {
   <!-- Featured products (auto-rotating) -->
   <section class="highlight-categories" data-aos="fade-up" aria-labelledby="featured-title">
     <h2 id="featured-title">Featured Space Treats</h2>
+    <!-- Grid container where products are rendered (initially SSR, then rotated via JS) -->
     <div class="product-grid" id="featured-grid">
-      <?php foreach ($initial as $product):
+      <?php 
+      // Render initial 2 products with proper HTML escaping and schema.org markup
+      foreach ($initial as $product):
+          // Extract and escape product data to prevent XSS
           $id    = (int)$product['product_id'];
           $name  = htmlspecialchars($product['name'] ?? '');
           $desc  = htmlspecialchars($product['description'] ?? '');
@@ -87,14 +122,18 @@ foreach ($initial as $p) {
           $hover = htmlspecialchars($product['image2'] ?? '');
           $url   = $basePath . "/product.php?id={$id}";
       ?>
+        <!-- Product card with schema.org Product microdata for SEO -->
         <a href="<?= $url ?>" class="product-card-link" itemprop="hasPart" itemscope itemtype="https://schema.org/Product">
           <div class="product-card" data-aos="zoom-in">
             <div class="image-wrapper">
+              <!-- Main product image with lazy loading and async decoding -->
               <img src="<?= $img ?>" class="main-img" alt="<?= $name ?>" width="600" height="600" loading="lazy" decoding="async" itemprop="image" />
+              <!-- Alternate product image shown on hover (if available) -->
               <?php if ($hover): ?>
                 <img src="<?= $hover ?>" class="hover-img" alt="<?= $name ?> - alternate view" width="600" height="600" loading="lazy" decoding="async" />
               <?php endif; ?>
             </div>
+            <!-- Product name and description with schema.org properties -->
             <h3 itemprop="name"><?= $name ?></h3>
             <p itemprop="description"><?= $desc ?></p>
           </div>
@@ -114,10 +153,13 @@ foreach ($initial as $p) {
 </main>
 
 <?php
-// ---------------------- JSON-LD ----------------------
+// ========== JSON-LD STRUCTURED DATA FOR SEO ==========
+// Build array of JSON-LD schemas to include in page
+// These help search engines understand page content and business information
 $ld = [];
 
-// WebSite + SearchAction
+// WebSite schema with SearchAction
+// Enables Google Search integration and site search functionality
 $ld[] = [
   '@context' => 'https://schema.org',
   '@type'    => 'WebSite',
@@ -130,7 +172,8 @@ $ld[] = [
   ]
 ];
 
-// Organization
+// Organization schema
+// Identifies business information: name, URL, logo
 $ld[] = [
   '@context' => 'https://schema.org',
   '@type'    => 'Organization',
@@ -139,18 +182,25 @@ $ld[] = [
   'logo'     => $absBase . '/assets/images/logo.png'
 ];
 
-// Featured products (initial render only; not updated on rotation)
+// Featured products schema (initial render only)
+// Note: Rotated products are shown via JavaScript but not updated in JSON-LD
+// This is acceptable as search engines see the initial server-rendered products
 if ($featuredProducts) {
   $ld[] = count($featuredProducts) === 1
     ? $featuredProducts[0]
     : ['@context' => 'https://schema.org', '@graph' => $featuredProducts];
 }
 ?>
+<!-- Embed JSON-LD as script tag for search engines to parse -->
+<!-- This improves SEO and rich snippet appearance in search results -->
 <script type="application/ld+json">
 <?= json_encode(count($ld) === 1 ? $ld[0] : $ld, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT) . "\n" ?>
 </script>
 
-<!-- Auto-rotate featured products every 10s -->
+<!-- ========== FEATURED PRODUCTS AUTO-ROTATION ==========
+     Rotates featured products every 10 seconds from the AJAX endpoint
+     Uses fetch API with proper error handling and HTML escaping
+     Includes smooth fade transition effects -->
 <script>
 (function () {
   const container = document.getElementById('featured-grid');
@@ -158,12 +208,17 @@ if ($featuredProducts) {
 
   const base = <?= json_encode($basePath) ?>;
 
+  // Escape HTML special characters to prevent XSS attacks
+  // Safely converts user data into HTML-safe strings
   function escapeHtml(s) {
     return String(s ?? '').replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;','\'':'&#39;'}[m]));
   }
 
+  // Render product list into the featured grid HTML
+  // Takes array of product objects and creates clickable product cards
   function renderProducts(list) {
     container.innerHTML = list.map(p => {
+      // Extract and escape all product data for safe HTML insertion
       const name = escapeHtml(p.name);
       const desc = escapeHtml(p.description || '');
       const img  = escapeHtml(p.image1 || '');
@@ -183,9 +238,13 @@ if ($featuredProducts) {
     }).join('');
   }
 
+  // Fetch new random products from server and render them
+  // Makes AJAX request to random_products.php endpoint
+  // Includes proper error handling for network issues
   function refreshProducts() {
     fetch(`${base}/ajax/random_products.php?limit=2`, { headers: { 'X-Requested-With': 'XMLHttpRequest' }})
       .then(res => {
+        // Check for HTTP errors (404, 500, etc)
         if (!res.ok) throw new Error('HTTP ' + res.status);
         return res.json();
       })
@@ -194,24 +253,34 @@ if ($featuredProducts) {
       .catch(err => console.error('Featured products error:', err));
   }
 
-  // First refresh shortly after load (keeps SSR fast, then rotate)
+  // Initial rotation: first refresh 2 seconds after page load
+  // Gives server time to respond while keeping visual feel snappy
   setTimeout(refreshProducts, 2000);
-  // Rotate every 10s
+  
+  // Continuous rotation: refresh featured products every 10 seconds
+  // Keeps product showcase fresh and engaging for returning visitors
   setInterval(refreshProducts, 10000);
 })();
 </script>
 
 <style>
+/* Featured products container with smooth opacity transitions */
 #featured-grid {
   position: relative;
   transition: opacity 1.2s cubic-bezier(.4,0,.2,1);
 }
+
+/* Fading state: applied when products are being replaced */
+/* Creates blur, brightness, and glow effects for visual polish */
 #featured-grid.fading {
   opacity: 0.15;
   pointer-events: none;
   filter: blur(2px) brightness(1.2) drop-shadow(0 0 24px #5dd9ff) drop-shadow(0 0 48px #00ff6a);
   background: radial-gradient(ellipse at 60% 40%, rgba(93,217,255,0.12) 0%, rgba(0,0,0,0) 80%);
 }
+
+/* Animated pseudo-element overlay for glowing transition effect */
+/* Becomes visible during fade transition for enhanced visual feedback */
 #featured-grid::after {
   content: '';
   display: block;
@@ -223,6 +292,8 @@ if ($featuredProducts) {
   transition: opacity 1.2s cubic-bezier(.4,0,.2,1);
   background: radial-gradient(ellipse at 60% 40%, rgba(93,217,255,0.18) 0%, rgba(0,0,0,0) 80%);
 }
+
+/* Show glow overlay when grid is fading (during product rotation) */
 #featured-grid.fading::after {
   opacity: 1;
 }

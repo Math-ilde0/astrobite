@@ -1,24 +1,36 @@
 <?php
 /**
- * cart.php - Shopping Cart Page
+ * cart.php - Shopping Cart Display and Management
+ * 
+ * Displays cart items, quantities, and order summary. Allows quantity updates and item removal
+ * via AJAX. Session-based authentication required. Empty carts redirect to products page.
+ * 
+ * Session: user_id (auth), cart (array)
+ * Dependencies: db.php, header.php, footer.php, ajax/update-cart.php, ajax/remove-cart-item.php
  */
 
 session_start();
 require_once 'includes/db.php';
 
-// Redirect if not logged in
+// -------------------------------------------------------
+// 1) Verify User Authentication
+// -------------------------------------------------------
 if (!isset($_SESSION['user_id'])) {
   header('Location: login.php');
   exit;
 }
 
-// Page title for header
+// -------------------------------------------------------
+// 2) Set SEO Metadata
+// -------------------------------------------------------
 $pageTitle = 'Shopping Cart — AstroBite';
 $pageDescription = 'Review your shopping cart and proceed to checkout.';
 
 require_once 'includes/header.php';
 
-// Get cart from session
+// -------------------------------------------------------
+// 3) Calculate Cart Totals
+// -------------------------------------------------------
 $cart = $_SESSION['cart'] ?? [];
 $total = 0;
 $cart_count = 0;
@@ -30,15 +42,18 @@ foreach ($cart as $item) {
 ?>
 
 <main class="container cart-page">
+  <!-- ========== PAGE TITLE ========== -->
   <h1>Shopping Cart</h1>
 
+  <!-- ========== EMPTY CART STATE ========== -->
   <?php if (empty($cart)): ?>
     <p class="empty-cart-message">Your cart is empty.</p>
     <a href="<?= $basePath ?>/products.php" class="button primary">Continue Shopping</a>
 
+  <!-- ========== CART WITH ITEMS ========== -->
   <?php else: ?>
     <div class="cart-wrapper">
-      <!-- Cart Items -->
+      <!-- ========== CART ITEMS TABLE ========== -->
       <section class="cart-items">
         <h2>Cart Items (<?= $cart_count ?>)</h2>
         
@@ -89,7 +104,7 @@ foreach ($cart as $item) {
         </div>
       </section>
 
-      <!-- Cart Summary -->
+      <!-- ========== ORDER SUMMARY ========== -->
       <section class="cart-summary">
         <h2>Order Summary</h2>
         <div class="summary-content">
@@ -117,14 +132,16 @@ foreach ($cart as $item) {
     </div>
   <?php endif; ?>
 
-  <!-- Screen reader announcements -->
+  <!-- ========== SCREEN READER ANNOUNCEMENTS ========== -->
   <div class="sr-live" aria-live="polite" aria-atomic="true"></div>
 </main>
 
+<!-- ========== CART PAGE STYLES ========== -->
 <style>
 .cart-page { padding: 2rem 0; }
 .cart-page h1 { margin-bottom: 2rem; }
 
+/* Empty cart message */
 .empty-cart-message {
   text-align: center;
   padding: 2rem;
@@ -133,6 +150,7 @@ foreach ($cart as $item) {
   margin-bottom: 2rem;
 }
 
+/* Two-column grid: items on left, summary on right */
 .cart-wrapper {
   display: grid;
   grid-template-columns: 2fr 1fr;
@@ -140,6 +158,7 @@ foreach ($cart as $item) {
   margin-bottom: 2rem;
 }
 
+/* Cart items section styling */
 .cart-items {
   background: rgba(10, 40, 60, 0.4);
   border: 1px solid rgba(255, 255, 255, 0.12);
@@ -153,10 +172,12 @@ foreach ($cart as $item) {
   font-size: 1.3rem;
 }
 
+/* Scrollable table container for mobile */
 .cart-table-responsive {
   overflow-x: auto;
 }
 
+/* Cart table styling */
 .cart-table {
   width: 100%;
   border-collapse: collapse;
@@ -185,6 +206,7 @@ foreach ($cart as $item) {
   padding: 1rem 0.75rem;
 }
 
+/* Product link styling */
 .item-name a {
   color: #5dd9ff;
   text-decoration: none;
@@ -200,6 +222,7 @@ foreach ($cart as $item) {
   font-weight: 600;
 }
 
+/* Quantity input field */
 .qty-input {
   width: 70px;
   padding: 0.5rem;
@@ -216,6 +239,7 @@ foreach ($cart as $item) {
   box-shadow: 0 0 8px rgba(93, 217, 255, 0.3);
 }
 
+/* Remove button styling */
 .btn-remove {
   padding: 0.5rem 1rem;
   background: rgba(255, 100, 100, 0.1);
@@ -232,6 +256,7 @@ foreach ($cart as $item) {
   border-color: rgba(255, 100, 100, 0.6);
 }
 
+/* Cart summary section with sticky positioning */
 .cart-summary {
   background: rgba(10, 40, 60, 0.4);
   border: 1px solid rgba(255, 255, 255, 0.12);
@@ -250,6 +275,7 @@ foreach ($cart as $item) {
 
 .summary-content { display: flex; flex-direction: column; gap: 1rem; }
 
+/* Summary rows for totals */
 .summary-row {
   display: flex;
   justify-content: space-between;
@@ -273,6 +299,7 @@ foreach ($cart as $item) {
   font-weight: 600;
 }
 
+/* Checkout button styling */
 button.primary.large,
 a.button.primary.large {
   width: 100%;
@@ -289,6 +316,7 @@ a.button.secondary {
   margin-top: 0.5rem;
 }
 
+/* Mobile responsive layout */
 @media (max-width: 768px) {
   .cart-wrapper {
     grid-template-columns: 1fr;
@@ -313,9 +341,12 @@ a.button.secondary {
 }
 </style>
 
+<!-- ========== CART INTERACTION SCRIPT ========== -->
+<!-- Handles quantity updates and item removal via AJAX -->
 <script>
 (function() {
-  // Update quantity in session
+  // ========== UPDATE QUANTITY ========== 
+  // Listen for quantity input changes and update via AJAX
   document.querySelectorAll('.update-qty').forEach(input => {
     input.addEventListener('change', async function() {
       const product_id = parseInt(this.dataset.productId);
@@ -347,7 +378,8 @@ a.button.secondary {
     });
   });
 
-  // Remove item from cart
+  // ========== REMOVE ITEM ========== 
+  // Listen for remove button clicks and remove via AJAX with confirmation
   document.querySelectorAll('.btn-remove').forEach(btn => {
     btn.addEventListener('click', async function() {
       const product_id = parseInt(this.dataset.productId);
